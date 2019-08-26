@@ -124,8 +124,16 @@ const WorldScene = new Phaser.Class({
     }
   },
 
+  //battle
   onMeetEnemy: function (player, zone) {
-    //battle
+    //move the zone to a new location
+    zone.x = Phaser.Math.RND.between(0, this.physics.world.bounds.width);
+    zone.y = Phaser.Math.RND.between(0, this.physics.world.bounds.height);
+
+    //shake map on meet
+    this.cameras.main.flash();
+
+    //start the battle
   }
 
 });
