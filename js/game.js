@@ -9,10 +9,13 @@ const BootScene = new Phaser.Class({
     this.load.image('tiles', 'assets/map/spritesheet.png');
     this.load.tilemapTiledJSON('map', 'assets/map/map.json');
     this.load.spritesheet('player', 'assets/RPG_assets.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.image('dragonblue', 'assets/dragonblue.png');
+    this.load.image('dragonorange', 'assets/dragonorange.png');
   },
 
   create: function () {
     this.scene.start('WorldScene');
+    this.scene.start('BattleScene')
   }
 });
 
@@ -138,6 +141,76 @@ const WorldScene = new Phaser.Class({
 
 });
 
+const Unit = new Phaser.Class({
+  Extends: Phaser.GameObjects.Sprite,
+  initialize:
+  function Unit (scene, x, y, texture, frame, type, hp, damage) {
+    Phaser.GameObjects.Sprite.call(this, scene, x, y, texture, frame);
+    this.type = type;
+    this.maxHp = this.hp = hp;
+    this.damage = damage;
+  },
+
+  attack: function (target) {
+    target.takeDamage(this.damage);
+  },
+  takeDamage: function (damage) {
+    this.hp -= damage;
+  }
+});
+
+const EnemyUnit = new Phaser.Class({
+  Extends: Unit,
+  initialize:
+  function EnemyUnit (scene, x, y, texture, frame, type, hp, damage) {
+    Unit.call(this, scene, x, y, texture, frame, type, hp, damage)
+  }
+});
+
+const PlayerUnit = new Phaser.Class({
+  Extends: Unit,
+  initialize:
+  function PlayerUnit (scene, x, y, texture, frame, type, hp, damage) {
+    Unit.call(this, scene, x, y, texture, frame, type, hp, damage);
+    this.flipX = true;
+    this.setScale(2);
+  }
+})
+
+const BattleScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function BattleScene() {
+      Phaser.Scene.call(this, { key: 'BattleScene' });
+    },
+
+  create: function () {
+    this.scene.launch('UIScene');
+    this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)')
+  }
+});
+
+const UIScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function UIScene() {
+      Phaser.Scene.call(this, { key: 'UIScene' });
+    },
+
+  create: function () {
+    //battle scene creation
+    this.graphics = this.add.graphics();
+    this.graphics.lineStyle(1, 0xffffff);
+    this.graphics.fillStyle(0x031f4c, 1);
+    this.graphics.strokeRect(2, 150, 90, 100);
+    this.graphics.fillRect(2, 150, 90, 100);
+    this.graphics.strokeRect(95, 150, 90, 100);
+    this.graphics.fillRect(95, 150, 90, 100);
+    this.graphics.strokeRect(188, 150, 130, 100);
+    this.graphics.fillRect(188, 150, 130, 100);
+  }
+})
+
 var config = {
   type: Phaser.AUTO,
   parent: 'content',
@@ -154,7 +227,9 @@ var config = {
   },
   scene: [
     BootScene,
-    WorldScene
+    WorldScene,
+    BattleScene,
+    UIScene
   ]
 };
 var game = new Phaser.Game(config);
