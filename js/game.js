@@ -198,7 +198,7 @@ const UIScene = new Phaser.Class({
     },
 
   create: function () {
-    //battle scene creation
+    //battle menu creation
     this.graphics = this.add.graphics();
     this.graphics.lineStyle(1, 0xffffff);
     this.graphics.fillStyle(0x031f4c, 1);
@@ -208,6 +208,151 @@ const UIScene = new Phaser.Class({
     this.graphics.fillRect(95, 150, 90, 100);
     this.graphics.strokeRect(188, 150, 130, 100);
     this.graphics.fillRect(188, 150, 130, 100);
+
+    //battle units creation
+    this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)');
+
+    //player units
+    const warrior = new PlayerUnit(this, 250, 50, 'player', 4, 'Warrior', 100, 20);
+    this.add.existing(warrior);
+    const mage = new PlayerUnit(this, 260, 100, 'player', 1, 'Mage', 80, 8);
+    this.add.existing(mage);
+
+    //enemy units
+    const dragonblue = new EnemyUnit(this, 50, 50, 'dragonblue', null, 'Dragon', 50, 3);
+    this.add.existing(dragonblue);
+    const dragonorange = new EnemyUnit(this, 40, 100, 'dragonorange', null, 'Dragon2', 50, 3);
+    this.add.existing(dragonorange);
+
+    //create player array
+    this.players = [ warrior, mage ];
+
+    //create enemy array
+    this.enemies = [ dragonblue, dragonorange ];
+
+    //create all units array
+    this.units = this.players.concat(this.enemies);
+
+    //run scene
+    this.scene.launch('UIScene');
+
+    //add menus to the scene
+    this.menus = this.add.container();
+    this.playerMenu = new PlayerMenu(195, 153, this);
+    this.actionsMenu = new ActionsMenu(100, 153, this);
+    this.enemyMenu = new EnemyMenu(8, 153, this);
+
+    //the current menu
+    this.currentMenu = this.actionsMenu;
+
+    //add menus to the container
+    this.menus.add(this.playerMenu);
+    this.menus.add(this.actionsMenu);
+    this.menus.add(this.enemyMenu);
+  }
+});
+
+const MenuItem = new Phaser.Class({
+  Extends: Phaser.GameObjects.Text,
+  initialize:
+  function MenuItem (x, y, text, scene) {
+    Phaser.GameObjects.Text.call(this, scene, x, y, text, { color: '#ffffff', align: 'left', fontSize: 15});
+  },
+
+  select: function () {
+    this.setColor('#f8ff38');
+  },
+
+  deselect: function () {
+    this.setColor('#ffffff')
+  }
+});
+
+const Menu = new Phaser.Class({
+  Extends: Phaser.GameObjects.Container,
+  initialize:
+  function Menu (x, y, scene, players) {
+    Phaser.GameObjects.Container.call(this, scene, x, y);
+    this.menuItems = [];
+    this.menuItemIndex = 0;
+    this.players = players;
+    this.x = x;
+    this.y = y;
+  },
+
+  addMenuItem: function (unit) {
+    const menuItem = new MenuItem(0, this.menuItems.length*20, unit, this.scene);
+    this.menuItems.push(menuItem);
+    this.add(menuItem);
+  },
+
+  moveSelectionUp: function () {
+    this.menuItems[this.menuItemIndex].deselect();
+    this.menuItemIndex--;
+    if (this.menuItemIndex < 0) {
+      this.menuItemIndex = this.menuItems.length - 1;
+    };
+    this.menuItems[this.menuItemIndex].select();
+  },
+
+  moveSelectionDown: function () {
+    this.menuItems[this.menuItemIndex].deselect();
+    this.menuItemIndex++;
+    if (this.mneuItemIndex >= this.menuItems.length) {
+      this.menuItemIndex = 0;
+    };
+    this.menuItems[this.menuItemIndex].select();
+  },
+
+  select: function (index) {
+    if (!index) {
+      index = 0;
+    };
+    this.menuItems[this.menuItemIndex].deselect();
+    this.menuItemIndex = index;
+    this.menuItems[this.menuItemIndex].select();
+  },
+
+  deselect: function () {
+    this.menuItems[this.menuItemIndex].deselect();
+    this.menuItemIndex = 0;
+  },
+
+  confirm: function () {
+    //enter action here
+  }
+});
+
+const PlayerMenu = new Phaser.Class({
+  Extends: Menu,
+  initialize:
+  function PlayerMenu (x, y, scene) {
+    Menu.call(this, x, y, scene);
+  }
+});
+
+const ActionsMenu = new Phaser.Class({
+  Extends: Menu,
+  initialize:
+  function ActionsMenu(x, y, scene) {
+    Menu.call(this, x, y, scene);
+    this.addMenuItem('Attack');
+  },
+
+  confirm: function () {
+    //enter action here
+  }
+});
+
+const EnemyMenu = new Phaser.Class({
+  Extends: Menu,
+  initialize:
+  function EnemyMenu(x, y, scene) {
+    Menu.call(this, x, y, scene);
+  },
+
+  confirm: function () {
+    //enter action here
   }
 })
 
