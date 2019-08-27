@@ -89,6 +89,8 @@ const WorldScene = new Phaser.Class({
       this.spawns.create(x, y, 20, 20);
     };
     this.physics.add.overlap(this.player, this.spawns, this.onMeetEnemy, false, this);
+
+    this.sys.events.on('wake', this.wake, this);
   },
 
   update: function (time, delta) {
@@ -137,44 +139,69 @@ const WorldScene = new Phaser.Class({
     this.cameras.main.flash();
 
     //start the battle
-  }
+    this.scene.switch('BattleScene');
+  },
 
+  wake: function () {
+    this.cursors.left.reset();
+    this.cursors.right.reset();
+    this.cursors.up.reset();
+    this.cursors.down.reset();
+  }
 });
 
 const Unit = new Phaser.Class({
   Extends: Phaser.GameObjects.Sprite,
   initialize:
-  function Unit (scene, x, y, texture, frame, type, hp, damage) {
-    Phaser.GameObjects.Sprite.call(this, scene, x, y, texture, frame);
-    this.type = type;
-    this.maxHp = this.hp = hp;
-    this.damage = damage;
+    function Unit(scene, x, y, texture, frame, type, hp, damage) {
+      Phaser.GameObjects.Sprite.call(this, scene, x, y, texture, frame);
+      this.type = type;
+      this.maxHp = this.hp = hp;
+      this.damage = damage;
+      this.living = true;
+      this.menuItem = null;
+    },
+
+  //notifies menu if unit is dead
+  setMenuItem: function (item) {
+    this.menuItem = item;
   },
 
   attack: function (target) {
-    target.takeDamage(this.damage);
+    if (target.living) {
+      target.takeDamage(this.damage);
+      this.scene.events.emit('Message', this.type + ' attacks ' + target.type + ' for ' + this.damage + ' damage');
+    }
   },
+
   takeDamage: function (damage) {
     this.hp -= damage;
+    if (this.hp <= 0) {
+      this.hp = 0;
+      this.menuItem.unitKilled();
+      this.living = false;
+      this.visible = false;
+      this.menuItem = null;
+    }
   }
 });
 
 const EnemyUnit = new Phaser.Class({
   Extends: Unit,
   initialize:
-  function EnemyUnit (scene, x, y, texture, frame, type, hp, damage) {
-    Unit.call(this, scene, x, y, texture, frame, type, hp, damage)
-  }
+    function EnemyUnit(scene, x, y, texture, frame, type, hp, damage) {
+      Unit.call(this, scene, x, y, texture, frame, type, hp, damage)
+    }
 });
 
 const PlayerUnit = new Phaser.Class({
   Extends: Unit,
   initialize:
-  function PlayerUnit (scene, x, y, texture, frame, type, hp, damage) {
-    Unit.call(this, scene, x, y, texture, frame, type, hp, damage);
-    this.flipX = true;
-    this.setScale(2);
-  }
+    function PlayerUnit(scene, x, y, texture, frame, type, hp, damage) {
+      Unit.call(this, scene, x, y, texture, frame, type, hp, damage);
+      this.flipX = true;
+      this.setScale(2);
+    }
 })
 
 const BattleScene = new Phaser.Class({
@@ -185,11 +212,89 @@ const BattleScene = new Phaser.Class({
     },
 
   create: function () {
-    this.scene.launch('UIScene');
-
     //battle units creation
     this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)');
 
+    this.startBattle();
+
+    //listen to the scene wake event
+    this.sys.events.on('wake', this.startBattle, this);
+  },
+
+  nextTurn: function () {
+    if (this.checkEndBattle()) {
+      this.endBattle();
+      return;
+    }
+
+    do {
+      this.index++;
+      if (this.index >= this.units.length) {
+        this.index = 0;
+      }
+    } while (!this.units[this.index].living);
+
+    //if player unit
+    if (this.units[this.index] instanceof PlayerUnit) {
+      this.events.emit('PlayerSelect', this.index);
+    } else { //if enemy unit
+      let r;
+      do {
+        r = Math.floor(Math.random() * this.players.length);
+      } while (!this.heroes[r].living);
+
+      this.units[this.index].attack(this.players[r]);
+      this.time.addEvent({ delay: 3000, callback: this.nextTurn, callbackScope: this });
+    }
+  },
+
+  receivePlayerSelection: function (action, target) {
+    if (action === 'attack') {
+      this.units[this.index].attack(this.enemies[target]);
+    }
+    this.time.addEvent({ delay: 3000, callback: this.nextTurn, callbackScope: this });
+  },
+
+  exitBattle: function () {
+    this.scene.sleep('UIScene');
+    this.scene.switch('WorldScene');
+  },
+
+  wake: function () {
+    this.scene.run('UIScene');
+    this.time.addEvent({ delay: 2000, callback: this.exitBattle, callbackScope: this });
+  },
+
+  checkEndBattle: function () {
+    let victory = true;
+    for (let i = 0; i < this.enemies.length; i++) {
+      if (this.enemies[i].living) {
+        victory = false;
+      };
+    };
+
+    let gameOver = true;
+    for (let i = 0; i < this.players.length; i++) {
+      if (this.players[i].living) {
+        gameOver = false;
+      }
+    };
+
+    return victory || gameOver;
+  },
+
+  endBattle: function () {
+    this.players.length = 0;
+    this.enemies.length = 0;
+    for (let i = 0; i < this.units.length; i++) {
+      this.units[i].destroy();
+    };
+    this.units.length = 0;
+    this.scene.sleep('UIScene');
+    this.scene.switch('WorldScene');
+  },
+
+  startBattle: function () {
     //player units
     const warrior = new PlayerUnit(this, 250, 50, 'player', 4, 'Nica', 100, 20);
     this.add.existing(warrior);
@@ -203,42 +308,19 @@ const BattleScene = new Phaser.Class({
     this.add.existing(dragonorange);
 
     //create player array
-    this.players = [ warrior, mage ];
+    this.players = [warrior, mage];
 
     //create enemy array
-    this.enemies = [ dragonblue, dragonorange ];
+    this.enemies = [dragonblue, dragonorange];
 
     //create all units array
     this.units = this.players.concat(this.enemies);
 
+    //show the currently active unit in the array
+    this.index = -1;
+
     //run scene
     this.scene.launch('UIScene');
-
-    //show the currently active unit in the array
-    this.index = -1
-  },
-
-  nextTurn: function () {
-    this.index++;
-    if (this.index >= this.units.length) {
-      this.index = 0;
-    }
-    if (this.units[this.index]) {
-      if (this.units[this.index] instanceof PlayerUnit) {
-        this.events.emit('PlayerSelect', this.index);
-      } else {
-        const r = Math.floor(Math.random() * this.players.length);
-        this.units[this.index].attack(this.players[r]);
-        this.time.addEvent({ delay: 3000, callback: this.nextTurn, callbackScope: this })
-      }
-    }
-  },
-
-  receivePlayerSelection: function (action, target) {
-    if (action === 'attack') {
-      this.units[this.index].attack(this.enemies[target]);
-    }
-    this.time.addEvent({ delay: 3000, callback: this.nextTurn, callbackScope: this});
   }
 });
 
@@ -278,23 +360,22 @@ const UIScene = new Phaser.Class({
     //get BattleScene
     this.battleScene = this.scene.get('BattleScene');
 
-    this.remapPlayers();
-    this.remapEnemies();
-
     //add listener events to menu
     this.input.keyboard.on('keydown', this.onKeyInput, this);
 
     this.battleScene.events.on('PlayerSelect', this.onPlayerSelect, this);
 
-    this.events.on('SelectEnemies', this.onSelectEnemies, this);
+    this.events.on('SelectedAction', this.onSelectedAction, this);
 
     this.events.on('Enemy', this.onEnemy, this);
 
-    this.battleScene.nextTurn();
+    this.sys.events.on('wake', this.createMenu, this);
 
     //add battle messages
     this.message = new Message(this, this.battleScene.events);
     this.add.existing(this.message);
+
+    this.createMenu();
   },
 
   remapPlayers: function () {
@@ -308,7 +389,7 @@ const UIScene = new Phaser.Class({
   },
 
   onKeyInput: function (event) {
-    if (this.currentMenu) {
+    if (this.currentMenu && this.currentMenu.selected) {
       if (event.code === 'ArrowUp') {
         this.currentMenu.moveSelectionUp();
       } else if (event.code === 'ArrowDown') {
@@ -327,7 +408,7 @@ const UIScene = new Phaser.Class({
     this.currentMenu = this.actionsMenu;
   },
 
-  onSelectEnemies: function () {
+  onSelectedAction: function () {
     this.currentMenu = this.enemyMenu;
     this.enemyMenu.select(0);
   },
@@ -338,15 +419,21 @@ const UIScene = new Phaser.Class({
     this.enemyMenu.deselect();
     this.currentMenu = null;
     this.battleScene.receivePlayerSelection('attack', index);
+  },
+
+  createMenu: function () {
+    this.remapPlayers();
+    this.remapEnemies();
+    this.battleScene.nextTurn();
   }
 });
 
 const MenuItem = new Phaser.Class({
   Extends: Phaser.GameObjects.Text,
   initialize:
-  function MenuItem (x, y, text, scene) {
-    Phaser.GameObjects.Text.call(this, scene, x, y, text, { color: '#ffffff', align: 'left', fontSize: 15});
-  },
+    function MenuItem(x, y, text, scene) {
+      Phaser.GameObjects.Text.call(this, scene, x, y, text, { color: '#ffffff', align: 'left', fontSize: 15 });
+    },
 
   select: function () {
     this.setColor('#f8ff38');
@@ -354,42 +441,53 @@ const MenuItem = new Phaser.Class({
 
   deselect: function () {
     this.setColor('#ffffff')
-  }
+  },
+
+  //when player or enemy unit is killed
+  unitKilled: function () {
+    this.active = false;
+    this.visible = false;
+  },
 });
 
 const Menu = new Phaser.Class({
   Extends: Phaser.GameObjects.Container,
   initialize:
-  function Menu (x, y, scene, players) {
-    Phaser.GameObjects.Container.call(this, scene, x, y);
-    this.menuItems = [];
-    this.menuItemIndex = 0;
-    this.players = players;
-    this.x = x;
-    this.y = y;
-  },
+    function Menu(x, y, scene, players) {
+      Phaser.GameObjects.Container.call(this, scene, x, y);
+      this.menuItems = [];
+      this.menuItemIndex = 0;
+      this.x = x;
+      this.y = y;
+      this.selected = false;
+    },
 
   addMenuItem: function (unit) {
-    const menuItem = new MenuItem(0, this.menuItems.length*20, unit, this.scene);
+    const menuItem = new MenuItem(0, this.menuItems.length * 20, unit, this.scene);
     this.menuItems.push(menuItem);
     this.add(menuItem);
+    return menuItem;
   },
 
   moveSelectionUp: function () {
     this.menuItems[this.menuItemIndex].deselect();
-    this.menuItemIndex--;
-    if (this.menuItemIndex < 0) {
-      this.menuItemIndex = this.menuItems.length - 1;
-    };
+    do {
+      this.menuItemIndex--;
+      if (this.menuItemIndex < 0) {
+        this.menuItemIndex = this.menuItems.length - 1;
+      }
+    } while (!this.menuItems[this.menuItemIndex].active);
     this.menuItems[this.menuItemIndex].select();
   },
 
   moveSelectionDown: function () {
     this.menuItems[this.menuItemIndex].deselect();
-    this.menuItemIndex++;
-    if (this.mneuItemIndex >= this.menuItems.length) {
-      this.menuItemIndex = 0;
-    };
+    do {
+      this.menuItemIndex++;
+      if (this.mneuItemIndex >= this.menuItems.length) {
+        this.menuItemIndex = 0;
+      };
+    } while (!this.menuItems[this.menuItemIndex].active);
     this.menuItems[this.menuItemIndex].select();
   },
 
@@ -399,12 +497,23 @@ const Menu = new Phaser.Class({
     };
     this.menuItems[this.menuItemIndex].deselect();
     this.menuItemIndex = index;
+    while (!this.menuItems[this.menuItemIndex].active) {
+      this.menuItemIndex++;
+      if (this.menuItemIndex >= this.menuItems.length) {
+        this.menuItemIndex = 0;
+      };
+      if (this.menuItemIndex == index) {
+        return;
+      }
+    }
     this.menuItems[this.menuItemIndex].select();
+    this.selected = true;
   },
 
   deselect: function () {
     this.menuItems[this.menuItemIndex].deselect();
     this.menuItemIndex = 0;
+    this.selected = false;
   },
 
   confirm: function () {
@@ -422,39 +531,40 @@ const Menu = new Phaser.Class({
   remap: function (units) {
     this.clear();
     for (let i = 0; i < units.length; i++) {
-      const unit = units[i];
-      this.addMenuItem(unit.type);
+      let unit = units[i];
+      unit.setMenuItem(this.addMenuItem(unit.type));
     }
+    this.menuItemIndex = 0;
   }
 });
 
 const PlayerMenu = new Phaser.Class({
   Extends: Menu,
   initialize:
-  function PlayerMenu (x, y, scene) {
-    Menu.call(this, x, y, scene);
-  }
+    function PlayerMenu(x, y, scene) {
+      Menu.call(this, x, y, scene);
+    }
 });
 
 const ActionsMenu = new Phaser.Class({
   Extends: Menu,
   initialize:
-  function ActionsMenu(x, y, scene) {
-    Menu.call(this, x, y, scene);
-    this.addMenuItem('Attack');
-  },
+    function ActionsMenu(x, y, scene) {
+      Menu.call(this, x, y, scene);
+      this.addMenuItem('Attack');
+    },
 
   confirm: function () {
-    this.scene.events.emit('SelectEnemies')
+    this.scene.events.emit('SelectedAction')
   }
 });
 
 const EnemyMenu = new Phaser.Class({
   Extends: Menu,
   initialize:
-  function EnemyMenu(x, y, scene) {
-    Menu.call(this, x, y, scene);
-  },
+    function EnemyMenu(x, y, scene) {
+      Menu.call(this, x, y, scene);
+    },
 
   confirm: function () {
     this.scene.events.emit('Enemy', this.menuItemIndex);
@@ -464,21 +574,21 @@ const EnemyMenu = new Phaser.Class({
 const Message = new Phaser.Class({
   Extends: Phaser.GameObjects.Container,
   initialize:
-  function Message (scene, events) {
-    Phaser.GameObjects.Container.call(this, scene, 160, 30);
-    const graphics = this.scene.add.graphics();
-    this.add(graphics);
-    graphics.lineStyle(1, 0xffffff, 0.8);
-    graphics.fillStyle(0x031f4c, 0.3);
-    graphics.strokeRect(-90, -15, 180, 30);
-    graphics.fillRect(-90, -15, 180, 30);
+    function Message(scene, events) {
+      Phaser.GameObjects.Container.call(this, scene, 160, 30);
+      const graphics = this.scene.add.graphics();
+      this.add(graphics);
+      graphics.lineStyle(1, 0xffffff, 0.8);
+      graphics.fillStyle(0x031f4c, 0.3);
+      graphics.strokeRect(-90, -15, 180, 30);
+      graphics.fillRect(-90, -15, 180, 30);
 
-    this.text = new Phaser.GameObjects.Text(scene, 0, 0, '', { color: '#ffffff', align: 'center', fontSize: 13, wordWrap: { width: 160, useAdvancedWrap: true}});
-    this.add(this.text);
-    this.text.setOrigin(0.5);
-    events.on('Message', this.showMessage, this);
-    this.visible = false;
-  },
+      this.text = new Phaser.GameObjects.Text(scene, 0, 0, '', { color: '#ffffff', align: 'center', fontSize: 13, wordWrap: { width: 160, useAdvancedWrap: true } });
+      this.add(this.text);
+      this.text.setOrigin(0.5);
+      events.on('Message', this.showMessage, this);
+      this.visible = false;
+    },
 
   showMessage: function (text) {
     this.text.setText(text);
@@ -486,7 +596,7 @@ const Message = new Phaser.Class({
     if (this.hideEvent) {
       this.hideEvent.remove(false);
     }
-    this.hideEvent = this.scene.time.addEvent({ delay: 2000, callback: this.hideMessage, callbackScope: this});
+    this.hideEvent = this.scene.time.addEvent({ delay: 2000, callback: this.hideMessage, callbackScope: this });
   },
 
   hideMessage: function () {
