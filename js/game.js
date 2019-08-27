@@ -186,28 +186,6 @@ const BattleScene = new Phaser.Class({
 
   create: function () {
     this.scene.launch('UIScene');
-    this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)')
-  }
-});
-
-const UIScene = new Phaser.Class({
-  Extends: Phaser.Scene,
-  initialize:
-    function UIScene() {
-      Phaser.Scene.call(this, { key: 'UIScene' });
-    },
-
-  create: function () {
-    //battle menu creation
-    this.graphics = this.add.graphics();
-    this.graphics.lineStyle(1, 0xffffff);
-    this.graphics.fillStyle(0x031f4c, 1);
-    this.graphics.strokeRect(2, 150, 90, 100);
-    this.graphics.fillRect(2, 150, 90, 100);
-    this.graphics.strokeRect(95, 150, 90, 100);
-    this.graphics.fillRect(95, 150, 90, 100);
-    this.graphics.strokeRect(188, 150, 130, 100);
-    this.graphics.fillRect(188, 150, 130, 100);
 
     //battle units creation
     this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)');
@@ -235,6 +213,27 @@ const UIScene = new Phaser.Class({
 
     //run scene
     this.scene.launch('UIScene');
+  }
+});
+
+const UIScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function UIScene() {
+      Phaser.Scene.call(this, { key: 'UIScene' });
+    },
+
+  create: function () {
+    //battle menu creation
+    this.graphics = this.add.graphics();
+    this.graphics.lineStyle(1, 0xffffff);
+    this.graphics.fillStyle(0x031f4c, 1);
+    this.graphics.strokeRect(2, 150, 90, 100);
+    this.graphics.fillRect(2, 150, 90, 100);
+    this.graphics.strokeRect(95, 150, 90, 100);
+    this.graphics.fillRect(95, 150, 90, 100);
+    this.graphics.strokeRect(188, 150, 130, 100);
+    this.graphics.fillRect(188, 150, 130, 100);
 
     //add menus to the scene
     this.menus = this.add.container();
@@ -249,6 +248,22 @@ const UIScene = new Phaser.Class({
     this.menus.add(this.playerMenu);
     this.menus.add(this.actionsMenu);
     this.menus.add(this.enemyMenu);
+
+    //get BattleScene
+    this.battleScene = this.scene.get('BattleScene');
+
+    this.remapPlayers();
+    this.remapEnemies();
+  },
+
+  remapPlayers: function () {
+    const players = this.battleScene.players;
+    this.playerMenu.remap(players);
+  },
+
+  remapEnemies: function () {
+    const enemies = this.battleScene.enemies;
+    this.enemyMenu.remap(enemies);
   }
 });
 
@@ -320,6 +335,22 @@ const Menu = new Phaser.Class({
 
   confirm: function () {
     //enter action here
+  },
+
+  clear: function () {
+    for (let i = 0; i < this.menuItems.length; i++) {
+      this.menuItems[i].destroy();
+    };
+    this.menuItems.length = 0;
+    this.menuItemIndex = 0;
+  },
+
+  remap: function (units) {
+    this.clear();
+    for (let i = 0; i < units.length; i++) {
+      const unit = units[i];
+      this.addMenuItem(unit.type);
+    }
   }
 });
 
