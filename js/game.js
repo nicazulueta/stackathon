@@ -15,7 +15,7 @@ const BootScene = new Phaser.Class({
 
   create: function () {
     this.scene.start('WorldScene');
-    this.scene.start('BattleScene')
+    //this.scene.start('BattleScene');
   }
 });
 
@@ -234,15 +234,13 @@ const BattleScene = new Phaser.Class({
       }
     } while (!this.units[this.index].living);
 
-    //if player unit
     if (this.units[this.index] instanceof PlayerUnit) {
       this.events.emit('PlayerSelect', this.index);
-    } else { //if enemy unit
+    } else { // if enemy unit
       let r;
       do {
         r = Math.floor(Math.random() * this.players.length);
-      } while (!this.heroes[r].living);
-
+      } while (!this.players[r].living)
       this.units[this.index].attack(this.players[r]);
       this.time.addEvent({ delay: 3000, callback: this.nextTurn, callbackScope: this });
     }
