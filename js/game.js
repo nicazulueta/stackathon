@@ -14,7 +14,7 @@ const BootScene = new Phaser.Class({
   },
 
   create: function () {
-    this.scene.start('TitleScene');
+    this.scene.switch('TitleScene');
   }
 });
 
@@ -36,7 +36,7 @@ const TitleScene = new Phaser.Class({
     const title = this.add.text(100, 100, 'Stackathon RPG')
     const startTitleText = this.add.text(70, 200, "Press 'Enter' to start")
 
-    this.cursors = this.input.keyboard.createCursorKeys();
+    this._cursors = this.input.keyboard.createCursorKeys();
     this.input.keyboard.on('keydown', this.onKeyInput, this);
   },
 
@@ -64,7 +64,7 @@ const CastleScene = new Phaser.Class({
 
     //create player sprite
     this.player = this.physics.add.sprite(160, 180, 'player', 3);
-    this.cursors = this.input.keyboard.createCursorKeys();
+    this._cursors = this.input.keyboard.createCursorKeys();
 
     //animate player movement
     this.anims.create({
@@ -96,45 +96,55 @@ const CastleScene = new Phaser.Class({
     this.exitzone = this.physics.add.group({
       classType: Phaser.GameObjects.Zone
     });
-      const x = 150
-      const y = 220
-      this.exitzone.create(x, y, 20, 20);
+    const x = 150
+    const y = 220
+    this.exitzone.create(x, y, 20, 20);
   },
 
   update: function (time, delta) {
     //set player movement
     this.player.body.setVelocity(0);
-    if (this.cursors.left.isDown) {
+    if (this._cursors.left.isDown) {
       this.player.body.setVelocityX(-80);
     }
-    else if (this.cursors.right.isDown) {
+    else if (this._cursors.right.isDown) {
       this.player.body.setVelocityX(80);
     }
-    if (this.cursors.up.isDown) {
+    if (this._cursors.up.isDown) {
       this.player.body.setVelocityY(-80);
     }
-    else if (this.cursors.down.isDown) {
+    else if (this._cursors.down.isDown) {
       this.player.body.setVelocityY(80);
     }
 
     //animate player movement
-    if (this.cursors.left.isDown) {
+    if (this._cursors.left.isDown) {
       this.player.anims.play('left', true);
       this.player.flipX = true;
     }
-    else if (this.cursors.right.isDown) {
+    else if (this._cursors.right.isDown) {
       this.player.anims.play('right', true);
       this.player.flipX = false;
     }
-    else if (this.cursors.up.isDown) {
+    else if (this._cursors.up.isDown) {
       this.player.anims.play('up', true);
     }
-    else if (this.cursors.down.isDown) {
+    else if (this._cursors.down.isDown) {
       this.player.anims.play('down', true);
     }
     else {
       this.player.anims.stop();
     }
+
+    this.physics.add.collider(this.player, this.exitzone, this.onCastleExit, false, this);
+  },
+
+  onCastleExit: function (player, zone) {
+    //flash map on exit
+    this.cameras.main.flash();
+
+    //start the battle
+    this.scene.switch('WorldScene');
   }
 })
 
@@ -150,6 +160,11 @@ const WorldScene = new Phaser.Class({
   },
 
   create: function () {
+    this.anims.remove('left');
+    this.anims.remove('down');
+    this.anims.remove('up');
+    this.anims.remove('right');
+
     //create map tiles
     const map = this.make.tilemap({ key: 'map' });
     const tiles = map.addTilesetImage('spritesheet', 'tiles');
@@ -158,7 +173,7 @@ const WorldScene = new Phaser.Class({
     obstacles.setCollisionByExclusion([-1]);
 
     //create player sprite
-    this.player = this.physics.add.sprite(50, 100, 'player', 10);
+    this.player = this.physics.add.sprite(180, 1, 'player', 10);
     this.physics.world.bounds.width = map.widthInPixels;
     this.physics.world.bounds.height = map.heightInPixels;
     this.player.setCollideWorldBounds(true);
