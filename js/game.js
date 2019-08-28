@@ -14,30 +14,59 @@ const BootScene = new Phaser.Class({
   },
 
   create: function () {
-    this.scene.start('TitleScreen');
+    this.scene.start('TitleScene');
   }
 });
 
-const TitleScreen = new Phaser.Class({
+const TitleScene = new Phaser.Class({
   Extends: Phaser.Scene,
   initialize:
-    function TitleScreen() {
-      Phaser.scene.call(this, { key: 'TitleScreen' })
+    function TitleScene() {
+      Phaser.Scene.call(this, { key: 'TitleScene' });
     },
 
   preload: function () {
-
+    this.load.image('bg', 'assets/bgCastle.png');
   },
 
   create: function () {
-    //this.scene.switch('WorldScene')
+    const background = this.add.sprite(0, 0, 'bg')
+    background.setOrigin(0, 0);
+
+    const title = this.add.text(100, 100, 'Stackathon RPG')
+    const startTitleText = this.add.text(70, 200, "Press 'Enter' to start")
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.input.keyboard.on('keydown', this.onKeyInput, this);
+  },
+
+  onKeyInput: function (event) {
+    if (event.code === 'Enter') {
+      this.scene.switch('WorldScene')
+    }
   }
+});
+
+const TownScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function TownScene () {
+      Phaser.Scene.call(this, { key: 'TownScene' });
+    },
+
+    preload: function () {
+
+    },
+
+    create: function () {
+
+    }
 })
 
 const WorldScene = new Phaser.Class({
   Extends: Phaser.Scene,
   initialize:
-    function WorldScene() {
+    function WorldScene () {
       Phaser.Scene.call(this, { key: 'WorldScene' });
     },
 
@@ -633,9 +662,11 @@ var config = {
   },
   scene: [
     BootScene,
+    TitleScene,
+    TownScene,
     WorldScene,
     BattleScene,
     UIScene
   ]
 };
-var game = new Phaser.Game(config);
+const game = new Phaser.Game(config);
