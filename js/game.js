@@ -14,10 +14,25 @@ const BootScene = new Phaser.Class({
   },
 
   create: function () {
-    this.scene.start('WorldScene');
-    //this.scene.start('BattleScene');
+    this.scene.start('TitleScreen');
   }
 });
+
+const TitleScreen = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function TitleScreen() {
+      Phaser.scene.call(this, { key: 'TitleScreen' })
+    },
+
+  preload: function () {
+
+  },
+
+  create: function () {
+    //this.scene.switch('WorldScene')
+  }
+})
 
 const WorldScene = new Phaser.Class({
   Extends: Phaser.Scene,
@@ -89,7 +104,6 @@ const WorldScene = new Phaser.Class({
       this.spawns.create(x, y, 20, 20);
     };
     this.physics.add.overlap(this.player, this.spawns, this.onMeetEnemy, false, this);
-
     this.sys.events.on('wake', this.wake, this);
   },
 
@@ -394,7 +408,7 @@ const UIScene = new Phaser.Class({
         this.currentMenu.moveSelectionDown();
       } else if (event.code === 'ArrowRight' || event.code === 'Shift') {
 
-      } else if (event.code === 'Space' || event.code === 'ArrowLeft') {
+      } else if (event.code === 'Space') {
         this.currentMenu.confirm();
       }
     }
