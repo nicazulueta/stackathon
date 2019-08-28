@@ -42,31 +42,106 @@ const TitleScene = new Phaser.Class({
 
   onKeyInput: function (event) {
     if (event.code === 'Enter') {
-      this.scene.switch('WorldScene')
+      this.scene.switch('CastleScene')
     }
   }
 });
 
-const TownScene = new Phaser.Class({
+const CastleScene = new Phaser.Class({
   Extends: Phaser.Scene,
   initialize:
-    function TownScene () {
-      Phaser.Scene.call(this, { key: 'TownScene' });
+    function CastleScene() {
+      Phaser.Scene.call(this, { key: 'CastleScene' });
     },
 
-    preload: function () {
+  preload: function () {
+    this.load.image('castle', '/assets/16castle.png')
+  },
 
-    },
+  create: function () {
+    const background = this.add.sprite(0, 0, 'castle');
+    background.setOrigin(0, 0);
 
-    create: function () {
+    //create player sprite
+    this.player = this.physics.add.sprite(160, 180, 'player', 3);
+    this.cursors = this.input.keyboard.createCursorKeys();
 
+    //animate player movement
+    this.anims.create({
+      key: 'left',
+      frames: this.anims.generateFrameNumbers('player', { frames: [4, 10, 4, 16] }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'right',
+      frames: this.anims.generateFrameNumbers('player', { frames: [4, 10, 4, 16] }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'up',
+      frames: this.anims.generateFrameNumbers('player', { frames: [5, 11, 5, 17] }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'down',
+      frames: this.anims.generateFrameNumbers('player', { frames: [3, 9, 3, 15] }),
+      frameRate: 10,
+      repeat: -1
+    });
+
+    //add exit
+    this.exitzone = this.physics.add.group({
+      classType: Phaser.GameObjects.Zone
+    });
+      const x = 150
+      const y = 220
+      this.exitzone.create(x, y, 20, 20);
+  },
+
+  update: function (time, delta) {
+    //set player movement
+    this.player.body.setVelocity(0);
+    if (this.cursors.left.isDown) {
+      this.player.body.setVelocityX(-80);
     }
+    else if (this.cursors.right.isDown) {
+      this.player.body.setVelocityX(80);
+    }
+    if (this.cursors.up.isDown) {
+      this.player.body.setVelocityY(-80);
+    }
+    else if (this.cursors.down.isDown) {
+      this.player.body.setVelocityY(80);
+    }
+
+    //animate player movement
+    if (this.cursors.left.isDown) {
+      this.player.anims.play('left', true);
+      this.player.flipX = true;
+    }
+    else if (this.cursors.right.isDown) {
+      this.player.anims.play('right', true);
+      this.player.flipX = false;
+    }
+    else if (this.cursors.up.isDown) {
+      this.player.anims.play('up', true);
+    }
+    else if (this.cursors.down.isDown) {
+      this.player.anims.play('down', true);
+    }
+    else {
+      this.player.anims.stop();
+    }
+  }
 })
 
 const WorldScene = new Phaser.Class({
   Extends: Phaser.Scene,
   initialize:
-    function WorldScene () {
+    function WorldScene() {
       Phaser.Scene.call(this, { key: 'WorldScene' });
     },
 
@@ -339,8 +414,12 @@ const BattleScene = new Phaser.Class({
     //player units
     const warrior = new PlayerUnit(this, 250, 50, 'player', 4, 'Nica', 100, 20);
     this.add.existing(warrior);
-    const mage = new PlayerUnit(this, 260, 100, 'player', 1, 'Coder', 80, 8);
+    const mage = new PlayerUnit(this, 260, 75, 'player', 1, 'Eliot', 80, 8);
     this.add.existing(mage);
+    const mage1 = new PlayerUnit(this, 270, 100, 'player', 1, 'Jonathan', 80, 8);
+    this.add.existing(mage1);
+    const mage2 = new PlayerUnit(this, 280, 125, 'player', 1, 'Preston', 80, 8);
+    this.add.existing(mage2);
 
     //enemy units
     const dragonblue = new EnemyUnit(this, 50, 50, 'dragonblue', null, 'Dragon1', 50, 3);
@@ -349,7 +428,7 @@ const BattleScene = new Phaser.Class({
     this.add.existing(dragonorange);
 
     //create player array
-    this.players = [warrior, mage];
+    this.players = [warrior, mage, mage1, mage2];
 
     //create enemy array
     this.enemies = [dragonblue, dragonorange];
@@ -663,7 +742,7 @@ var config = {
   scene: [
     BootScene,
     TitleScene,
-    TownScene,
+    CastleScene,
     WorldScene,
     BattleScene,
     UIScene
