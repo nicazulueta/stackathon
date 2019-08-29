@@ -33,8 +33,8 @@ const TitleScene = new Phaser.Class({
     const background = this.add.sprite(0, 0, 'bg')
     background.setOrigin(0, 0);
 
-    const title = this.add.text(100, 100, 'Stackathon RPG')
-    const startTitleText = this.add.text(70, 200, "Press 'Enter' to start")
+    const title = this.add.text(55, 100, 'Stackathon RPG', { fontSize: 25 });
+    const startTitleText = this.add.text(80, 200, "Press 'Enter' to start", { fontSize: 12 })
 
     this._cursors = this.input.keyboard.createCursorKeys();
     this.input.keyboard.on('keydown', this.onKeyInput, this);
@@ -42,10 +42,40 @@ const TitleScene = new Phaser.Class({
 
   onKeyInput: function (event) {
     if (event.code === 'Enter') {
-      this.scene.switch('CastleScene')
+      this.scene.switch('IntroScene')
     }
   }
 });
+
+const IntroScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function IntroScene() {
+      Phaser.Scene.call(this, { key: 'IntroScene' });
+    },
+
+  preload: function () {
+
+  },
+
+  create: function () {
+    const background = this.add.sprite(0, 0, 'bg');
+    background.setOrigin(0, 0);
+
+    const story = this.add.text(100, 20, 'Story:', { fontSize: 25 });
+    const instructions = this.add.text(55, 100, 'The castle is under attack by dragons! You and the other most noble knights in the kingdom have been dispatched to defeat all of the enemies in the surrounding area.', { fontSize: 12, wordWrap: { width: 200, useAdvancedWrap: true } });
+
+    this.__cursors = this.input.keyboard.createCursorKeys();
+    this.input.keyboard.on('keydown', this.onKeyInput, this);
+  },
+
+  onKeyInput: function (event) {
+    if (event.code === 'Enter') {
+      this.scene.sleep('IntroScene');
+      this.scene.switch('CastleScene')
+    }
+  }
+})
 
 const CastleScene = new Phaser.Class({
   Extends: Phaser.Scene,
@@ -156,7 +186,7 @@ const WorldScene = new Phaser.Class({
     },
 
   preload: function () {
-
+    this.load.image('worldcastle', '/assets/worldcastle.png')
   },
 
   create: function () {
@@ -172,8 +202,11 @@ const WorldScene = new Phaser.Class({
     const obstacles = map.createStaticLayer('Obstacles', tiles, 0, 0);
     obstacles.setCollisionByExclusion([-1]);
 
+    //create world castle
+    this.add.sprite(180, 50, 'worldcastle');
+
     //create player sprite
-    this.player = this.physics.add.sprite(180, 1, 'player', 10);
+    this.player = this.physics.add.sprite(180, 90, 'player', 3);
     this.physics.world.bounds.width = map.widthInPixels;
     this.physics.world.bounds.height = map.heightInPixels;
     this.player.setCollideWorldBounds(true);
@@ -217,7 +250,7 @@ const WorldScene = new Phaser.Class({
     this.spawns = this.physics.add.group({
       classType: Phaser.GameObjects.Zone
     });
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 10; i++) {
       const x = Phaser.Math.RND.between(0, this.physics.world.bounds.width);
       const y = Phaser.Math.RND.between(0, this.physics.world.bounds.height);
       this.spawns.create(x, y, 20, 20);
@@ -260,13 +293,27 @@ const WorldScene = new Phaser.Class({
     else {
       this.player.anims.stop();
     }
+
+    //   //add zone to re-enter castle
+    //   this.entercastlezone = this.physics.add.group({
+    //     classType: Phaser.GameObjects.Zone
+    //   });
+    //   const x = 170
+    //   const y = 50
+    //   this.entercastlezone.create(x, y, 20, 20);
+    //   this.physics.add.collider(this.player, this.entercastlezone, this.onEnterCastle, false, this);
+    // },
+
+    // onEnterCastle: function () {
+    //   this.scene.switch('CastleScene');
   },
 
   //battle
   onMeetEnemy: function (player, zone) {
     //move the zone to a new location
-    zone.x = Phaser.Math.RND.between(0, this.physics.world.bounds.width);
-    zone.y = Phaser.Math.RND.between(0, this.physics.world.bounds.height);
+    // zone.x = Phaser.Math.RND.between(0, this.physics.world.bounds.width);
+    // zone.y = Phaser.Math.RND.between(0, this.physics.world.bounds.height);
+    zone.destroy();
 
     //shake map on meet
     this.cameras.main.flash();
@@ -344,9 +391,14 @@ const BattleScene = new Phaser.Class({
       Phaser.Scene.call(this, { key: 'BattleScene' });
     },
 
+  preload: function () {
+    this.load.image('battle-bg', '/assets/battle-bg.png')
+  },
+
   create: function () {
-    //battle units creation
-    this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)');
+    const background = this.add.sprite(0, 0, 'battle-bg')
+    background.setOrigin(0, 0)
+    //this.cameras.main.setBackgroundColor('rgba(0, 200, 0, 0.5)');
 
     this.startBattle();
 
@@ -427,7 +479,7 @@ const BattleScene = new Phaser.Class({
 
   startBattle: function () {
     //player units
-    const warrior = new PlayerUnit(this, 250, 50, 'player', 4, 'Nica', 100, 20);
+    const warrior = new PlayerUnit(this, 250, 50, 'player', 4, 'Hero', 100, 20);
     this.add.existing(warrior);
     const mage = new PlayerUnit(this, 260, 75, 'player', 1, 'Eliot', 80, 8);
     this.add.existing(mage);
@@ -437,9 +489,9 @@ const BattleScene = new Phaser.Class({
     this.add.existing(mage2);
 
     //enemy units
-    const dragonblue = new EnemyUnit(this, 50, 50, 'dragonblue', null, 'Dragon1', 50, 3);
+    const dragonblue = new EnemyUnit(this, 50, 50, 'dragonblue', null, 'B. Dragon', 50, 3);
     this.add.existing(dragonblue);
-    const dragonorange = new EnemyUnit(this, 40, 100, 'dragonorange', null, 'Dragon2', 50, 3);
+    const dragonorange = new EnemyUnit(this, 40, 100, 'dragonorange', null, 'R. Dragon', 50, 3);
     this.add.existing(dragonorange);
 
     //create player array
@@ -751,12 +803,13 @@ var config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 0 },
-      debug: true // set to true to view zones
+      debug: false// set to true to view zones
     }
   },
   scene: [
     BootScene,
     TitleScene,
+    IntroScene,
     CastleScene,
     WorldScene,
     BattleScene,
