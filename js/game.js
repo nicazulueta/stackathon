@@ -290,6 +290,7 @@ const WorldScene = new Phaser.Class({
   preload: function () {
     this.load.image('worldcastle', '/assets/worldcastle.png')
     this.load.image('worldtown', '/assets/worldtown.png')
+    this.load.image('grass', '/assets/grass1.png')
   },
 
   create: function () {
@@ -301,18 +302,20 @@ const WorldScene = new Phaser.Class({
     //create map tiles
     const map = this.make.tilemap({ key: 'map' });
     const tiles = map.addTilesetImage('spritesheet', 'tiles');
-    const grass = map.createStaticLayer('Grass', tiles, 0, 0);
+    //const grass = map.createStaticLayer('Grass', tiles, 0, 0);
+    const background = this.add.sprite(0, 0, 'grass');
+    background.setOrigin(0, 0);
     const obstacles = map.createStaticLayer('Obstacles', tiles, 0, 0);
     obstacles.setCollisionByExclusion([-1]);
 
     //create world castle
-    this.add.sprite(180, 50, 'worldcastle');
+    this.add.sprite(220, 150, 'worldcastle');
 
     //create world town
-    this.add.sprite(30, 150, 'worldtown');
+    this.add.sprite(40, 270, 'worldtown');
 
     //create player sprite
-    this.player = this.physics.add.sprite(180, 90, 'player', 3);
+    this.player = this.physics.add.sprite(220, 180, 'player', 3);
     this.physics.world.bounds.width = map.widthInPixels;
     this.physics.world.bounds.height = map.heightInPixels;
     this.player.setCollideWorldBounds(true);
@@ -416,8 +419,10 @@ const WorldScene = new Phaser.Class({
     this.entertownzone = this.physics.add.group({
           classType: Phaser.GameObjects.Zone
         });
-        const x = 50
-        const y = 160
+        const x = 60
+        const y = 280
+
+
         this.entertownzone.create(x, y, 20, 20);
         this.physics.add.collider(this.player, this.entertownzone, this.onEnterTown, false, this);
       },
