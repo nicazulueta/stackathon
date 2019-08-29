@@ -176,6 +176,108 @@ const CastleScene = new Phaser.Class({
     //start the battle
     this.scene.switch('WorldScene');
   }
+});
+
+const TownScene = new Phaser.Class({
+  Extends: Phaser.Scene,
+  initialize:
+    function TownScene () {
+      Phaser.Scene.call(this, { key: 'TownScene' });
+    },
+
+  preload: function () {
+    this.load.image('town', '/assets/town.png')
+  },
+
+  create: function () {
+    const background = this.add.sprite(0, 0, 'town');
+    background.setOrigin(0, 0);
+
+    //create player sprite
+    this.player = this.physics.add.sprite(310, 180, 'player', 4);
+    this.player.flipX = true;
+    this._cursors = this.input.keyboard.createCursorKeys();
+
+    //animate player movement
+    this.anims.create({
+      key: 'left',
+      frames: this.anims.generateFrameNumbers('player', { frames: [4, 10, 4, 16] }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'right',
+      frames: this.anims.generateFrameNumbers('player', { frames: [4, 10, 4, 16] }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'up',
+      frames: this.anims.generateFrameNumbers('player', { frames: [5, 11, 5, 17] }),
+      frameRate: 10,
+      repeat: -1
+    });
+    this.anims.create({
+      key: 'down',
+      frames: this.anims.generateFrameNumbers('player', { frames: [3, 9, 3, 15] }),
+      frameRate: 10,
+      repeat: -1
+    });
+
+    //add exit
+    this.exitTownZone = this.physics.add.group({
+      classType: Phaser.GameObjects.Zone
+    });
+    const x = 200
+    const y = 5
+    this.exitTownZone.create(x, y, 20, 20);
+  },
+
+  update: function (time, delta) {
+    //set player movement
+    this.player.body.setVelocity(0);
+    if (this._cursors.left.isDown) {
+      this.player.body.setVelocityX(-80);
+    }
+    else if (this._cursors.right.isDown) {
+      this.player.body.setVelocityX(80);
+    }
+    if (this._cursors.up.isDown) {
+      this.player.body.setVelocityY(-80);
+    }
+    else if (this._cursors.down.isDown) {
+      this.player.body.setVelocityY(80);
+    }
+
+    //animate player movement
+    if (this._cursors.left.isDown) {
+      this.player.anims.play('left', true);
+      this.player.flipX = true;
+    }
+    else if (this._cursors.right.isDown) {
+      this.player.anims.play('right', true);
+      this.player.flipX = false;
+    }
+    else if (this._cursors.up.isDown) {
+      this.player.anims.play('up', true);
+    }
+    else if (this._cursors.down.isDown) {
+      this.player.anims.play('down', true);
+    }
+    else {
+      this.player.anims.stop();
+    }
+
+    this.physics.add.collider(this.player, this.exitTownZone, this.onTownExit, false, this);
+  },
+
+  onTownExit: function (player, zone) {
+    //flash map on exit
+    this.cameras.main.flash();
+
+    //start the battle
+    this.scene.switch('WorldScene');
+  }
 })
 
 const WorldScene = new Phaser.Class({
@@ -187,6 +289,7 @@ const WorldScene = new Phaser.Class({
 
   preload: function () {
     this.load.image('worldcastle', '/assets/worldcastle.png')
+    this.load.image('worldtown', '/assets/worldtown.png')
   },
 
   create: function () {
@@ -204,6 +307,9 @@ const WorldScene = new Phaser.Class({
 
     //create world castle
     this.add.sprite(180, 50, 'worldcastle');
+
+    //create world town
+    this.add.sprite(30, 150, 'worldtown');
 
     //create player sprite
     this.player = this.physics.add.sprite(180, 90, 'player', 3);
@@ -306,6 +412,18 @@ const WorldScene = new Phaser.Class({
 
     // onEnterCastle: function () {
     //   this.scene.switch('CastleScene');
+
+    this.entertownzone = this.physics.add.group({
+          classType: Phaser.GameObjects.Zone
+        });
+        const x = 50
+        const y = 160
+        this.entertownzone.create(x, y, 20, 20);
+        this.physics.add.collider(this.player, this.entertownzone, this.onEnterTown, false, this);
+      },
+
+      onEnterTown: function () {
+        this.scene.switch('TownScene');
   },
 
   //battle
@@ -812,6 +930,7 @@ var config = {
     IntroScene,
     CastleScene,
     WorldScene,
+    TownScene,
     BattleScene,
     UIScene
   ]
